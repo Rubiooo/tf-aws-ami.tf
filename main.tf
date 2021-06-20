@@ -108,3 +108,42 @@ resource "aws_iam_user_policy_attachment" "vault-devops" {
 output "devops-role-arn" {
   value = aws_iam_role.devops.arn
 }
+
+## IAM superuser for EKS/ECR Admin
+
+resource "aws_iam_user" "eks_ecr_admin" {
+  name = "EKS-ECR-Admin"
+  path = "/"
+}
+
+data "aws_iam_policy_document" "eks_ecr_admin" {
+  statement {
+    
+    effect  = "Allow"
+    actions = [
+        "autoscaling:*",
+        "cloudformation:*",
+        "cloudwatch:*",
+        "elasticloadbalancing:*",
+        "eks:*",
+        "ec2:*",
+        "ecr:*",
+        "iam:*",
+        "kms:*",
+        "ssm:*",
+        "sts:GetFederationToken"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "eks_ecr_admin" {
+  name        = "EKS-ECR-Admin"
+  description = "EKS and ECR Admin"
+  policy      = data.aws_iam_policy_document.eks_ecr_admin.json
+}
+
+resource "aws_iam_user_policy_attachment" "eks_ecr_admin" {
+  user       = aws_iam_user.eks_ecr_admin.name
+  policy_arn = aws_iam_policy.eks_ecr_admin.arn
+}
