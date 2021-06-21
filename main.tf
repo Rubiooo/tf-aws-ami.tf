@@ -44,79 +44,15 @@ resource "aws_iam_user_policy_attachment" "vault" {
   policy_arn = aws_iam_policy.vault.arn
 }
 
-# IAM role that allows devops to deploy resources
-
-
-resource "aws_iam_role" "devops" {
-  name = "devops"
-  assume_role_policy = data.aws_iam_policy_document.devops.json
-}
-
-data "aws_iam_policy_document" "devops" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "AWS"
-      identifiers = [aws_iam_user.vault.arn]
-    }
-
-    principals {
-      type        = "Service"
-      identifiers = [var.trusted_ecs_service]
-    }
-
-    principals {
-      type        = "Service"
-      identifiers = [var.trusted_lambda_service]
-    }
-
-  }
-}
-
-resource "aws_iam_role_policy_attachment" "devops" {
-  role       = aws_iam_role.devops.name
-  count      = length(var.devops_iam_role_policy_arn)
-  policy_arn = var.devops_iam_role_policy_arn[count.index]
-}
-
-
-# Allow vault root user to assume the devops role
-
-data "aws_iam_policy_document" "vault-devops" {
-  statement {
-    
-    effect  = "Allow"
-    actions = [
-        "sts:AssumeRole",
-    ]
-    resources = [aws_iam_role.devops.arn]
-  }
-}
-
-resource "aws_iam_policy" "vault-devops" {
-  name        = "vault-assume-devops-role"
-  description = "policy to allow vault to assume devops role"
-  policy      = data.aws_iam_policy_document.vault-devops.json
-}
-
-resource "aws_iam_user_policy_attachment" "vault-devops" {
-  user       = aws_iam_user.vault.name
-  policy_arn = aws_iam_policy.vault-devops.arn
-}
-
-output "devops-role-arn" {
-  value = aws_iam_role.devops.arn
-}
 
 ## IAM superuser for EKS/ECR Admin
 
-resource "aws_iam_user" "eks_ecr_admin" {
-  name = "EKS-ECR-Admin"
+resource "aws_iam_user" "superuser" {
+  name = "vault-superuser"
   path = "/"
 }
 
-data "aws_iam_policy_document" "eks_ecr_admin" {
+data "aws_iam_policy_document" "superuser" {
   statement {
     
     effect  = "Allow"
@@ -131,19 +67,19 @@ data "aws_iam_policy_document" "eks_ecr_admin" {
         "iam:*",
         "kms:*",
         "ssm:*",
-        "sts:GetFederationToken"
+        "sts:GetFederationToken",
     ]
     resources = ["*"]
   }
 }
 
-resource "aws_iam_policy" "eks_ecr_admin" {
-  name        = "EKS-ECR-Admin"
-  description = "EKS and ECR Admin"
-  policy      = data.aws_iam_policy_document.eks_ecr_admin.json
+resource "aws_iam_policy" "superuser" {
+  name        = "vault-superuser"
+  description = "vault-superuser"
+  policy      = data.aws_iam_policy_document.superuser.json
 }
 
-resource "aws_iam_user_policy_attachment" "eks_ecr_admin" {
-  user       = aws_iam_user.eks_ecr_admin.name
-  policy_arn = aws_iam_policy.eks_ecr_admin.arn
+resource "aws_iam_user_policy_attachment" "superuser" {
+  user       = aws_iam_user.superuser.name
+  policy_arn = aws_iam_policy.superuser.arn
 }
